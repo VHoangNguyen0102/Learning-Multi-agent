@@ -30,6 +30,49 @@ class Colors:
     BG_WHITE = "\033[47m"
 
 
+async def update_interaction_history_async(session_service, app_name, user_id, session_id, entry):
+    """Add an entry to the interaction history in state.
+
+    Args:
+        session_service: The session service instance
+        app_name: The application name
+        user_id: The user ID
+        session_id: The session ID
+        entry: A dictionary containing the interaction data
+            - requires 'action' key (e.g., 'user_query', 'agent_response')
+            - other keys are flexible depending on the action type
+    """
+    try:
+        # Get current session
+        session = await session_service.get_session(
+            app_name=app_name, user_id=user_id, session_id=session_id
+        )
+
+        # Get current interaction history
+        interaction_history = session.state.get("interaction_history", [])
+
+        # Add timestamp if not already present
+        if "timestamp" not in entry:
+            entry["timestamp"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        # Add the entry to interaction history
+        interaction_history.append(entry)
+
+        # Create updated state
+        updated_state = session.state.copy()
+        updated_state["interaction_history"] = interaction_history
+
+        # Create a new session with updated state
+        await session_service.create_session(
+            app_name=app_name,
+            user_id=user_id,
+            session_id=session_id,
+            state=updated_state,
+        )
+    except Exception as e:
+        print(f"Error updating interaction history: {e}")
+
+
 def update_interaction_history(session_service, app_name, user_id, session_id, entry):
     """Add an entry to the interaction history in state.
 
@@ -73,6 +116,37 @@ def update_interaction_history(session_service, app_name, user_id, session_id, e
         print(f"Error updating interaction history: {e}")
 
 
+async def add_user_query_to_history_async(session_service, app_name, user_id, session_id, query):
+    """Add a user query to the interaction history."""
+    await update_interaction_history_async(
+        session_service,
+        app_name,
+        user_id,
+        session_id,
+        {
+            "action": "user_query",
+            "query": query,
+        },
+    )
+
+
+async def add_agent_response_to_history_async(
+    session_service, app_name, user_id, session_id, agent_name, response
+):
+    """Add an agent response to the interaction history."""
+    await update_interaction_history_async(
+        session_service,
+        app_name,
+        user_id,
+        session_id,
+        {
+            "action": "agent_response",
+            "agent": agent_name,
+            "response": response,
+        },
+    )
+
+
 def add_user_query_to_history(session_service, app_name, user_id, session_id, query):
     """Add a user query to the interaction history."""
     update_interaction_history(
@@ -102,6 +176,94 @@ def add_agent_response_to_history(
             "response": response,
         },
     )
+
+
+async def display_state_async(
+    session_service, app_name, user_id, session_id, label="Current State"
+):
+    """Display the current session state in a formatted way."""
+    try:
+        session = await session_service.get_session(
+            app_name=app_name, user_id=user_id, session_id=session_id
+        )
+
+        # Format the output with clear sections
+        print(f"\n{'-' * 10} {label} {'-' * 10}")
+
+        # Handle the user name
+        user_name = session.state.get("user_name", "Unknown")
+        print(f"👤 User: {user_name}")
+
+        # Handle financial profile
+        financial_profile = session.state.get("financial_profile", {})
+        if financial_profile:
+            print("💰 Financial Profile:")
+            print(
+                f"  - Student ID: {financial_profile.get('student_id', 'Unknown')}")
+            print(
+                f"  - University: {financial_profile.get('university', 'Unknown')}")
+            print(f"  - Year: {financial_profile.get('year', 'Unknown')}")
+            print(f"  - Major: {financial_profile.get('major', 'Unknown')}")
+            print(
+                f"  - Monthly Income: {financial_profile.get('monthly_income', 0):,} VND")
+            print(
+                f"  - Current Savings: {financial_profile.get('current_savings', 0):,} VND")
+            goals = financial_profile.get('financial_goals', [])
+            if goals:
+                print(f"  - Goals: {', '.join(goals)}")
+        else:
+            print("💰 Financial Profile: None")
+
+        # Handle interaction history in a more readable way
+        interaction_history = session.state.get("interaction_history", [])
+        if interaction_history:
+            print("📝 Interaction History:")
+            for idx, interaction in enumerate(interaction_history, 1):
+                # Pretty format dict entries, or just show strings
+                if isinstance(interaction, dict):
+                    action = interaction.get("action", "interaction")
+                    timestamp = interaction.get("timestamp", "unknown time")
+
+                    if action == "user_query":
+                        query = interaction.get("query", "")
+                        print(f'  {idx}. User query at {timestamp}: "{query}"')
+                    elif action == "agent_response":
+                        agent = interaction.get("agent", "unknown")
+                        response = interaction.get("response", "")
+                        # Truncate very long responses for display
+                        if len(response) > 100:
+                            response = response[:97] + "..."
+                        print(
+                            f'  {idx}. {agent} response at {timestamp}: "{response}"')
+                    else:
+                        details = ", ".join(
+                            f"{k}: {v}"
+                            for k, v in interaction.items()
+                            if k not in ["action", "timestamp"]
+                        )
+                        print(
+                            f"  {idx}. {action} at {timestamp}"
+                            + (f" ({details})" if details else "")
+                        )
+                else:
+                    print(f"  {idx}. {interaction}")
+        else:
+            print("📝 Interaction History: None")
+
+        # Show any additional state keys that might exist
+        other_keys = [
+            k
+            for k in session.state.keys()
+            if k not in ["user_name", "financial_profile", "interaction_history"]
+        ]
+        if other_keys:
+            print("🔑 Additional State:")
+            for key in other_keys:
+                print(f"  {key}: {session.state[key]}")
+
+        print("-" * (22 + len(label)))
+    except Exception as e:
+        print(f"Error displaying state: {e}")
 
 
 def display_state(
@@ -153,7 +315,8 @@ def display_state(
                         # Truncate very long responses for display
                         if len(response) > 100:
                             response = response[:97] + "..."
-                        print(f'  {idx}. {agent} response at {timestamp}: "{response}"')
+                        print(
+                            f'  {idx}. {agent} response at {timestamp}: "{response}"')
                     else:
                         details = ", ".join(
                             f"{k}: {v}"
@@ -232,7 +395,7 @@ async def call_agent_async(runner, user_id, session_id, query):
     agent_name = None
 
     # Display state before processing the message
-    display_state(
+    await display_state_async(
         runner.session_service,
         runner.app_name,
         user_id,
@@ -256,7 +419,7 @@ async def call_agent_async(runner, user_id, session_id, query):
 
     # Add the agent response to interaction history if we got a final response
     if final_response_text and agent_name:
-        add_agent_response_to_history(
+        await add_agent_response_to_history_async(
             runner.session_service,
             runner.app_name,
             user_id,
@@ -266,7 +429,7 @@ async def call_agent_async(runner, user_id, session_id, query):
         )
 
     # Display state after processing the message
-    display_state(
+    await display_state_async(
         runner.session_service,
         runner.app_name,
         user_id,

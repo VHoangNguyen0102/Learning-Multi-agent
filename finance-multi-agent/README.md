@@ -1,60 +1,69 @@
-# Stateful Multi-Agent Systems in ADK
+# Hệ thống Multi-Agent Tài chính SACOMBANK
 
-This example demonstrates how to create a stateful multi-agent system in ADK, combining the power of persistent state management with specialized agent delegation. This approach creates intelligent agent systems that remember user information across interactions while leveraging specialized domain expertise.
+Dự án này minh họa cách tạo ra một hệ thống multi-agent có trạng thái trong ADK, kết hợp sức mạnh của quản lý trạng thái liên tục với việc phân công nhiệm vụ cho các agent chuyên biệt. Phương pháp này tạo ra hệ thống agent thông minh có thể ghi nhớ thông tin người dùng qua các tương tác và tận dụng chuyên môn của từng lĩnh vực.
 
-## What is a Stateful Multi-Agent System?
+## Hệ thống Multi-Agent Tài chính là gì?
 
-A Stateful Multi-Agent System combines two powerful patterns:
+Hệ thống Multi-Agent Tài chính kết hợp hai mô hình mạnh mẽ:
 
-1. **State Management**: Persisting information about users and conversations across interactions
-2. **Multi-Agent Architecture**: Distributing tasks among specialized agents based on their expertise
+1. **Quản lý Trạng thái**: Lưu trữ thông tin về người dùng và cuộc trò chuyện qua các tương tác
+2. **Kiến trúc Multi-Agent**: Phân phối nhiệm vụ giữa các agent chuyên biệt dựa trên chuyên môn của họ
 
-The result is a sophisticated agent ecosystem that can:
-- Remember user information and interaction history
-- Route queries to the most appropriate specialized agent
-- Provide personalized responses based on past interactions
-- Maintain context across multiple agent delegates
+Kết quả là một hệ sinh thái agent tinh vi có thể:
 
-This example implements a customer service system for an online course platform, where specialized agents handle different aspects of customer support while sharing a common state.
+- Ghi nhớ thông tin người dùng và lịch sử tương tác
+- Định tuyến truy vấn đến agent chuyên biệt phù hợp nhất
+- Cung cấp phản hồi cá nhân hóa dựa trên các tương tác trước đó
+- Duy trì ngữ cảnh qua nhiều lần ủy quyền agent
 
-## Project Structure
+Ví dụ này triển khai hệ thống tư vấn tài chính cho sinh viên của SACOMBANK, nơi các agent chuyên biệt xử lý các khía cạnh khác nhau của dịch vụ tài chính trong khi chia sẻ trạng thái chung.
+
+## Cấu trúc Dự án
 
 ```
-7-stateful-multi-agent/
+finance-multi-agent/
 │
-├── customer_service_agent/         # Main agent package
-│   ├── __init__.py                 # Required for ADK discovery
-│   ├── agent.py                    # Root agent definition
-│   └── sub_agents/                 # Specialized agents
-│       ├── course_support_agent/   # Handles course content questions
-│       ├── order_agent/            # Manages order history and refunds
-│       ├── policy_agent/           # Answers policy questions
-│       └── sales_agent/            # Handles course purchases
+├── customer_service_agent/         # Gói agent chính
+│   ├── __init__.py                 # Bắt buộc cho ADK discovery
+│   ├── agent.py                    # Định nghĩa agent gốc
+│   └── sub_agents/                 # Các agent chuyên biệt
+│       ├── loan_agent/             # Xử lý khoản vay học tập & du học
+│       ├── saving_agent/           # Quản lý tiết kiệm sinh viên
+│       ├── finance_offer_agent/    # Ưu đãi tài chính sinh viên
+│       └── budget_and_planning_agent/ # Hỗ trợ quản lý tài chính cá nhân
 │
-├── main.py                         # Application entry point with session setup
-├── utils.py                        # Helper functions for state management
-├── .env                            # Environment variables
-└── README.md                       # This documentation
+├── main.py                         # Điểm vào ứng dụng với thiết lập phiên
+├── utils.py                        # Hàm hỗ trợ quản lý trạng thái
+├── .env                            # Biến môi trường
+└── README.md                       # Tài liệu này
 ```
 
-## Key Components
+## Các Thành phần Chính
 
-### 1. Session Management
+### 1. Quản lý Phiên
 
-The example uses `InMemorySessionService` to store session state:
+Ví dụ sử dụng `InMemorySessionService` để lưu trữ trạng thái phiên:
 
 ```python
 session_service = InMemorySessionService()
 
 def initialize_state():
-    """Initialize the session state with default values."""
+    """Khởi tạo trạng thái phiên với các giá trị mặc định."""
     return {
-        "user_name": "Brandon Hancock",
-        "purchased_courses": [""],
+        "user_name": "Nguyễn Văn A",
+        "financial_profile": {
+            "student_id": "SV001",
+            "university": "Đại học Kinh tế TP.HCM",
+            "year": 3,
+            "major": "Tài chính ngân hàng",
+            "monthly_income": 5000000,
+            "current_savings": 15000000,
+            "financial_goals": ["du học", "mua laptop", "tiết kiệm dài hạn"]
+        },
         "interaction_history": [],
     }
 
-# Create a new session with initial state
+# Tạo phiên mới với trạng thái ban đầu
 session_service.create_session(
     app_name=APP_NAME,
     user_id=USER_ID,
@@ -63,63 +72,106 @@ session_service.create_session(
 )
 ```
 
-### 2. State Sharing Across Agents
+### 2. Chia sẻ Trạng thái giữa các Agent
 
-All agents in the system can access the same session state, enabling:
-- Root agent to track interaction history
-- Sales agent to update purchased courses
-- Course support agent to check if user has purchased specific courses
-- All agents to personalize responses based on user information
+Tất cả agent trong hệ thống có thể truy cập cùng một trạng thái phiên, cho phép:
 
-### 3. Multi-Agent Delegation
+- Agent gốc theo dõi lịch sử tương tác
+- Loan agent cập nhật thông tin vay
+- Saving agent kiểm tra khả năng tài chính của sinh viên
+- Tất cả agent cá nhân hóa phản hồi dựa trên thông tin người dùng
 
-The customer service agent routes queries to specialized sub-agents:
+### 3. Phân công Multi-Agent
+
+Agent dịch vụ tài chính định tuyến truy vấn đến các sub-agent chuyên biệt:
 
 ```python
-customer_service_agent = Agent(
-    name="customer_service",
+financial_service_agent = Agent(
+    name="financial_service",
     model="gemini-2.0-flash",
-    description="Customer service agent for AI Developer Accelerator community",
+    description="Tư vấn viên tài chính SACOMBANK cho sinh viên",
     instruction="""
-    You are the primary customer service agent for the AI Developer Accelerator community.
-    Your role is to help users with their questions and direct them to the appropriate specialized agent.
-    
-    # ... detailed instructions ...
-    
+    Bạn là tư vấn viên tài chính chính của SACOMBANK, chuyên phục vụ sinh viên.
+    Vai trò của bạn là hỗ trợ sinh viên với các câu hỏi về tài chính và chuyển họ đến agent chuyên biệt phù hợp.
+
+    # ... hướng dẫn chi tiết ...
+
     """,
-    sub_agents=[policy_agent, sales_agent, course_support_agent, order_agent],
-    tools=[get_current_time],
+    sub_agents=[loan_agent, saving_agent, finance_offer_agent, budget_and_planning_agent],
+    tools=[],
 )
 ```
 
-## How It Works
+## Cách thức Hoạt động
 
-1. **Initial Session Creation**:
-   - A new session is created with user information and empty interaction history
-   - Session state is initialized with default values
+1. **Tạo Phiên Ban đầu**:
 
-2. **Conversation Tracking**:
-   - Each user message is added to `interaction_history` in the state
-   - Agents can review past interactions to maintain context
+   - Phiên mới được tạo với thông tin sinh viên và lịch sử tương tác trống
+   - Trạng thái phiên được khởi tạo với các giá trị mặc định
 
-3. **Query Routing**:
-   - The root agent analyzes the user query and decides which specialist should handle it
-   - Specialized agents receive the full state context when delegated to
+2. **Theo dõi Cuộc trò chuyện**:
 
-4. **State Updates**:
-   - When a user purchases a course, the sales agent updates `purchased_courses`
-   - These updates are available to all agents for future interactions
+   - Mỗi tin nhắn của người dùng được thêm vào `interaction_history` trong trạng thái
+   - Các agent có thể xem lại các tương tác trước để duy trì ngữ cảnh
 
-5. **Personalized Responses**:
-   - Agents tailor responses based on purchase history and previous interactions
-   - Different paths are taken based on what the user has already purchased
+3. **Định tuyến Truy vấn**:
 
-## Getting Started
+   - Agent gốc phân tích truy vấn của người dùng và quyết định chuyên gia nào nên xử lý
+   - Các agent chuyên biệt nhận toàn bộ ngữ cảnh trạng thái khi được ủy quyền
 
+4. **Cập nhật Trạng thái**:
 
-### Setup
+   - Khi sinh viên thực hiện giao dịch tài chính, các agent cập nhật thông tin hồ sơ
+   - Những cập nhật này có sẵn cho tất cả agent cho các tương tác tương lai
 
-1. Activate the virtual environment from the root directory:
+5. **Phản hồi Cá nhân hóa**:
+   - Các agent điều chỉnh phản hồi dựa trên hồ sơ tài chính và tương tác trước đó
+   - Các đường dẫn khác nhau được thực hiện dựa trên những gì sinh viên đã từng quan tâm
+
+## Các Agent Chuyên biệt
+
+### 1. Loan Agent (Chuyên viên Khoản vay)
+
+- **Chức năng**: Tư vấn khoản vay học tập và du học
+- **Dịch vụ chính**:
+  - Hướng dẫn thủ tục vay học tập (hồ sơ, giấy tờ, điều kiện)
+  - Tư vấn khoản vay du học (ngoại tệ, thời hạn, lãi suất)
+  - Ước tính hạn mức vay dựa trên thông tin sinh viên
+  - Theo dõi tiến độ xử lý hồ sơ vay
+
+### 2. Saving Agent (Chuyên viên Tiết kiệm)
+
+- **Chức năng**: Tư vấn tiết kiệm sinh viên
+- **Dịch vụ chính**:
+  - Giới thiệu các gói tiết kiệm cho sinh viên
+  - So sánh lãi suất tiết kiệm ngắn hạn và dài hạn
+  - Tư vấn cách lập kế hoạch tiết kiệm để đạt mục tiêu
+  - Hỗ trợ tiết kiệm cho học phí, du học, mua laptop
+
+### 3. Finance Offer Agent (Chuyên viên Ưu đãi Tài chính)
+
+- **Chức năng**: Tư vấn ưu đãi tài chính sinh viên
+- **Dịch vụ chính**:
+  - Tìm kiếm và liệt kê các ưu đãi hiện hành
+  - Gợi ý lựa chọn sản phẩm tài chính phù hợp nhu cầu
+  - Thông tin về thẻ tín dụng sinh viên, miễn phí dịch vụ
+  - Chương trình khuyến mãi đặc biệt
+
+### 4. Budget & Planning Agent (Chuyên viên Quản lý Tài chính)
+
+- **Chức năng**: Hỗ trợ quản lý tài chính cá nhân
+- **Dịch vụ chính**:
+  - Hướng dẫn lập ngân sách cá nhân
+  - Theo dõi thu chi hàng tháng
+  - Đưa ra cảnh báo khi vượt chi tiêu dự kiến
+  - Lập kế hoạch tài chính dài hạn
+
+## Bắt đầu
+
+### Thiết lập
+
+1. Kích hoạt môi trường ảo từ thư mục gốc:
+
 ```bash
 # macOS/Linux:
 source ../.venv/bin/activate
@@ -129,20 +181,22 @@ source ../.venv/bin/activate
 ..\.venv\Scripts\Activate.ps1
 ```
 
-2. Make sure your Google API key is set in the `.env` file:
+2. Đảm bảo Google API key được đặt trong file `.env`:
+
 ```
 GOOGLE_API_KEY=your_api_key_here
 ```
 
-### Running the Example
+### Chạy Ví dụ
 
-To run the stateful multi-agent example:
+Để chạy ví dụ multi-agent tài chính:
 
 ```bash
 python main.py
 ```
 
 This will:
+
 1. Initialize a new session with default state
 2. Start an interactive conversation with the customer service agent
 3. Track all interactions in the session state
@@ -153,14 +207,17 @@ This will:
 Try this conversation flow to test the system:
 
 1. **Start with a general query**:
+
    - "What courses do you offer?"
    - (Root agent will route to sales agent)
 
 2. **Ask about purchasing**:
+
    - "I want to buy the AI Marketing Platform course"
    - (Sales agent will process the purchase and update state)
 
 3. **Ask about course content**:
+
    - "Can you tell me about the content in the AI Marketing Platform course?"
    - (Root agent will route to course support agent, which now has access)
 
